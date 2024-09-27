@@ -5,27 +5,62 @@ using System.Text;
 ConnectionFactory factory = new ConnectionFactory();
 factory.Uri = new Uri("amqps://vlukfgov:ssmrGwVrhO4lbGe2DZMPXJ8sjEfTLIzY@kebnekaise.lmq.cloudamqp.com/vlukfgov");
 
-using IConnection connection = factory.CreateConnection();
-using (IModel channel = connection.CreateModel())
+IConnection connection = null;
+IModel channel = null;
+
+try
 {
-    // Aynı QueueDeclare parametrelerini kullanıyoruz.
+    connection = factory.CreateConnection();
+    channel = connection.CreateModel();
+
+    // Kuyruğu oluşturduğumuzdan emin olalım.
     channel.QueueDeclare(queue: "hello-queue", durable: true, exclusive: false, autoDelete: false);
+
+    channel.BasicQos(0, 1, false);
 
     EventingBasicConsumer consumer = new EventingBasicConsumer(channel);
 
-    // AutoAck: true -> Mesaj alındıktan hemen sonra otomatik olarak kuyruktan silinsin.
-    channel.BasicConsume(queue: "hello-queue", autoAck: true, consumer: consumer);
+    channel.BasicConsume(queue: "hello-queue", autoAck: false, consumer: consumer);
 
     consumer.Received += (sender, e) =>
     {
-        Console.WriteLine("Mesaj alındı!");
-        var mesaj = Encoding.UTF8.GetString(e.Body.ToArray());
-        Console.WriteLine($"Mesaj: {mesaj}");
+        try
+        {
+            Thread.Sleep(1500);  // Simüle edilen işleme süresi.
+            string message = Encoding.UTF8.GetString(e.Body.ToArray());
+            Console.WriteLine($"{message} alındı");
+
+            // Mesaj başarıyla işlendiğinde onayla.
+            channel.BasicAck(e.DeliveryTag, false);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Mesaj işlenirken bir hata oluştu: {ex.Message}");
+            // Hata durumunda mesajı yeniden kuyruğa koyabilir ya da loglayabilirsiniz.
+        }
     };
 
-    // Kuyruktaki mesaj sayısını kontrol edelim.
+
+    // Kuyruktaki mevcut mesaj sayısını kontrol et.
     var queueInfo = channel.QueueDeclarePassive("hello-queue");
     Console.WriteLine($"Kuyrukta {queueInfo.MessageCount} mesaj var.");
+
+    // Program sonlanmadan önce kanalı açık tutuyoruz.
+    Console.WriteLine("Mesaj alımı için bekleniyor... Çıkmak için [Enter] tuşuna basın.");
+    Console.ReadLine();
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"Bir hata oluştu: {ex.Message}");
+}
+finally
+{
+    // Bağlantı ve kanalı dispose ederek temizleme işlemi.
+    if (channel != null && channel.IsOpen)
+        channel.Close();
+
+    if (connection != null && connection.IsOpen)
+        connection.Close();
 }
 
 Console.ReadLine();
