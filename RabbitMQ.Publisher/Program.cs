@@ -10,22 +10,19 @@ using IConnection connection = factory.CreateConnection();
 
 using (IModel channel = connection.CreateModel())
 {
-    channel.ExchangeDeclare("logs-topic", type: ExchangeType.Topic, durable: true, autoDelete: false);
+    channel.ExchangeDeclare("header-exchange", type: ExchangeType.Headers, durable: true, autoDelete: false);
 
-    for (int i = 0; i < 50; i++)
-    {
-        var rnd = new Random();
+    Dictionary<string, object> headers = new Dictionary<string, object>();
 
-        var log1 = LogNames[rnd.Next(0, 4)];
-        var log2 = LogNames[rnd.Next(0, 4)];
-        var log3 = LogNames[rnd.Next(0, 4)];
+    headers.Add("format", "PDF");
+    headers.Add("shape", "A4");
 
-        var rootKey = $"{log1}.{log2}.{log3}";
+    var properties = channel.CreateBasicProperties();
+    properties.Headers = headers;
 
-        Byte[] message = Encoding.UTF8.GetBytes($"Log - {rootKey} - {i}. Mesaj");
-        channel.BasicPublish(exchange: "logs-topic", routingKey: rootKey, body: message);
-        Console.WriteLine($"Log {i} Gönderilmiştir.");
-    }
+    channel.BasicPublish("header-exchange", string.Empty, properties, Encoding.UTF8.GetBytes("Hedare Exchange mesajı."));
+
+    Console.WriteLine("Mesaj gönderilmiştir.");
 }
 
 Console.ReadLine();

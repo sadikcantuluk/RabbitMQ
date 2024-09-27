@@ -55,9 +55,13 @@ try
 
     string queueName = channel.QueueDeclare().QueueName;
 
-    var rootKey = "*.Error.*";
+    Dictionary<string, Object> header = new Dictionary<string, Object>();
 
-    channel.QueueBind(queueName, "logs-topic", rootKey, null);
+    header.Add("format", "PDF");
+    header.Add("shape", "A4");
+    header.Add("x-macth", "all");
+
+    channel.QueueBind(queueName, "header-exchange", string.Empty, header);
 
     // Consumer oluştur
     EventingBasicConsumer consumer = new EventingBasicConsumer(channel);
