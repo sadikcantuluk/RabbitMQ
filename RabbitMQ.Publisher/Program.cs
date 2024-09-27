@@ -10,29 +10,23 @@ using IConnection connection = factory.CreateConnection();
 
 using (IModel channel = connection.CreateModel())
 {
-    channel.ExchangeDeclare("logs-direct", type: ExchangeType.Direct, durable: true, autoDelete: false);
-
-    foreach (var item in LogNames)
-    {
-        var rootKey = $"root-{item}";
-
-        var queueName = $"direct-queue-{item}";
-        channel.QueueDeclare(queueName, true, false, false);
-        channel.QueueBind(queueName, "logs-direct", rootKey, null);
-    }
+    channel.ExchangeDeclare("logs-topic", type: ExchangeType.Topic, durable: true, autoDelete: false);
 
     for (int i = 0; i < 50; i++)
     {
-        var logNamesItem = LogNames[new Random().Next(1, 5)];
-        var rootKey = $"root-{logNamesItem}";
+        var rnd = new Random();
 
-        Byte[] message = Encoding.UTF8.GetBytes($"Log {logNamesItem} - {i}");
-        channel.BasicPublish(exchange: "logs-direct", routingKey: rootKey, body: message);
+        var log1 = LogNames[rnd.Next(0, 4)];
+        var log2 = LogNames[rnd.Next(0, 4)];
+        var log3 = LogNames[rnd.Next(0, 4)];
+
+        var rootKey = $"{log1}.{log2}.{log3}";
+
+        Byte[] message = Encoding.UTF8.GetBytes($"Log - {rootKey} - {i}. Mesaj");
+        channel.BasicPublish(exchange: "logs-topic", routingKey: rootKey, body: message);
         Console.WriteLine($"Log {i} Gönderilmiştir.");
     }
 }
-
-
 
 Console.ReadLine();
 

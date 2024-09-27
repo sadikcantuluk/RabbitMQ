@@ -50,12 +50,14 @@ try
     connection = factory.CreateConnection();
     channel = connection.CreateModel();
 
-    channel.ExchangeDeclare("logs-fanout", type: ExchangeType.Fanout, durable: true, autoDelete: false);
-
     // Basic QoS (Quality of Service) ile mesajların birer birer işlenmesini sağla
     channel.BasicQos(0, 1, false);
 
-    string queueName = "direct-queue-Info";
+    string queueName = channel.QueueDeclare().QueueName;
+
+    var rootKey = "*.Error.*";
+
+    channel.QueueBind(queueName, "logs-topic", rootKey, null);
 
     // Consumer oluştur
     EventingBasicConsumer consumer = new EventingBasicConsumer(channel);
@@ -69,12 +71,12 @@ try
             string message = Encoding.UTF8.GetString(e.Body.ToArray());
             Console.WriteLine($"{message} alındı");
 
-            // Dosya yolu ve dosya ismi
-            string directoryPath = @"C:\Users\sadik\OneDrive\Masaüstü";
-            string fileName = "log-Error.txt";
-            string fullPath = Path.Combine(directoryPath, fileName);
+            //// Dosya yolu ve dosya ismi
+            //string directoryPath = @"C:\Users\sadik\OneDrive\Masaüstü";
+            //string fileName = "log-Error.txt";
+            //string fullPath = Path.Combine(directoryPath, fileName);
 
-            File.AppendAllText(fullPath, message + "\n");
+            //File.AppendAllText(fullPath, message + "\n");
 
             // Mesaj başarıyla işlendiğinde onayla (ACK)
             channel.BasicAck(e.DeliveryTag, false);
